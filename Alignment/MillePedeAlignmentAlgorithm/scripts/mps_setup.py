@@ -12,6 +12,7 @@ import subprocess
 import Alignment.MillePedeAlignmentAlgorithm.mpslib.tools as mps_tools
 import Alignment.MillePedeAlignmentAlgorithm.mpslib.Mpslibclass as mpslib
 
+print("mps_setup starting...")
 
 parser = argparse.ArgumentParser(description = "Setup local mps database")
 parser.add_argument("-m", "--setup-merge", dest = "setup_merge",
@@ -158,18 +159,19 @@ if not args.memory or args.memory < pedeMemMin:
 # Create the job directories
 nJobExist = 0
 if args.append and os.path.isdir("jobData"):
-    # Append mode, and "jobData" exists
+    # Append mode, and "jobData" exists. Find the highest existing job number
     jobs = os.listdir("jobData")
-    job_regex = re.compile(r"job([0-9]{3})") # should we really restrict it to 3 digits?
-    existing_jobs = [job_regex.search(item) for item in jobs]
-    existing_jobs = [int(job.group(1)) for job in existing_jobs if job is not None]
-    nJobExist = sorted(existing_jobs)[-1]
+    job_regex = re.compile(r"job(\d+)") # can have any number of digits
+    existing_jobs_set = set()
+    for item in jobs:
+        job_regex = re.compile(r"job(\d+)")
+        x = job_regex.search(item)
+        if x:
+            print(x.group(1))
+            existing_jobs_set.add(int(x.group(1)))
+    nJobExist = max(existing_jobs_set)
 
-if nJobExist == 0 or nJobExist <=0 or nJobExist > 999: # quite rude method... -> enforce job number limit earlier?
-    # Delete all
-    mps_tools.remove_existing_object("jobData")
-    os.makedirs("jobData")
-    nJobExist = 0;
+print("mps_setup: nJobExist=",nJobExist,"  append=",args.append)
 
 for j in range(1, args.n_jobs + 1):
     i = j+nJobExist
@@ -254,19 +256,20 @@ for j in range(1, args.n_jobs + 1):
     theIsn = "{0:03d}".format(i)
 
     # create the cfg file
-    cmd = ["mps_splice.py", args.config_template,
-           "jobData/{}/theSplit".format(jobdir),
-           "jobData/{}/the.py".format(jobdir), theIsn]
+    skip_events = 0
+    max_events = 0
     if args.max_events is not None:
         chunk_size = int(args.max_events/args.n_jobs)
-        event_options = ["--skip-events", str(chunk_size*(j-1))]
+        skip_events = chunk_size*(j-1)
         max_events = (args.max_events - (args.n_jobs-1)*chunk_size
                       if j == args.n_jobs    # last job gets the remaining events
                       else chunk_size)
-        event_options.extend(["--max-events", str(max_events)])
-        cmd.extend(event_options)
-    print(" ".join(cmd))
-    mps_tools.run_checked(cmd)
+    
+    lib.mps_splice(args.config_template,
+                   "jobData/{}/theSplit".format(jobdir),
+                   "jobData/{}/the.py".format(jobdir),
+                   theIsn)
+
 
     # create the run script
     print("mps_script.pl {}  jobData/{}/theScript.sh {}/{} the.py jobData/{}/theSplit {} {} {}".format(args.batch_script, jobdir, theJobData, jobdir, jobdir, theIsn, args.mss_dir, lib.mssDirPool))

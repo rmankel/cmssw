@@ -15,6 +15,8 @@ import os
 # update database
 os.system("mps_update.py > /dev/null")
 
+print("mps_fetch starting")
+
 lib = mpslib.jobdatabase()
 lib.read_db()
 
@@ -39,6 +41,10 @@ for i in range(len(lib.JOBID)):
 
 lib.write_db()
 
+print("mps_fetch calling mps_check")
+
 # call mps_check
 os.system('mps_check.py')
+print("mps_fetch finished")
+
 

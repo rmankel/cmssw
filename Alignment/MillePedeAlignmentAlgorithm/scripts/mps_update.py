@@ -42,6 +42,7 @@ htcondor_jobstatus = {"1": "PEND", # Idle
 
 ################################################################################
 # collect submitted jobs (use 'in' to handle composites, e.g. DISABLEDFETCH)
+print("mps_update starting")
 lib = mpslib.jobdatabase()
 lib.read_db()
 
@@ -126,3 +127,4 @@ for job_id, mps_index in submitted_jobs.items():
 
 
 lib.write_db()
+print("mps_update finished")
